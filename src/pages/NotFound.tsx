@@ -1,26 +1,40 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
+
+import { Link } from 'react-router-dom';
+import Layout from '@/components/layout/Layout';
+import { Button } from '@/components/ui/button';
+import { Home, Search } from 'lucide-react';
 
 const NotFound = () => {
-  const location = useLocation();
-
-  useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
-  }, [location.pathname]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
-          Return to Home
-        </a>
+    <Layout>
+      <div className="container-blog py-16 md:py-24">
+        <div className="max-w-md mx-auto text-center">
+          <h1 className="font-serif text-8xl font-bold text-primary mb-4 animate-fade-in">404</h1>
+          <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
+            Page Not Found
+          </h2>
+          <p className="text-muted-foreground mb-8 animate-fade-in" style={{ animationDelay: '200ms' }}>
+            The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <Link to="/">
+              <Button className="w-full sm:w-auto flex items-center gap-2">
+                <Home className="h-4 w-4" />
+                Go to Homepage
+              </Button>
+            </Link>
+            
+            <Link to="/search">
+              <Button variant="outline" className="w-full sm:w-auto flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Search the Blog
+              </Button>
+            </Link>
+          </div>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 };
 
