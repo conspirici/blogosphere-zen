@@ -15,25 +15,51 @@ const ContactPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
-      toast({
-        title: "Message sent!",
-        description: "Thanks for reaching out. We'll get back to you soon.",
-        duration: 5000,
+    try {
+      // Replace 'YOUR_FORMSPREE_ENDPOINT' with your actual Formspree endpoint
+      const response = await fetch('https://formspree.io/f/YOUR_FORMSPREE_ENDPOINT', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          subject,
+          message
+        })
       });
       
-      // Reset form
-      setName('');
-      setEmail('');
-      setSubject('');
-      setMessage('');
+      if (response.ok) {
+        toast({
+          title: "Message sent!",
+          description: "Thanks for reaching out. We'll get back to you soon.",
+          duration: 5000,
+        });
+        
+        // Reset form
+        setName('');
+        setEmail('');
+        setSubject('');
+        setMessage('');
+      } else {
+        throw new Error('Form submission failed');
+      }
+    } catch (error) {
+      toast({
+        title: "Message failed to send",
+        description: "There was an issue sending your message. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   return (

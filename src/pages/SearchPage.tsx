@@ -1,16 +1,46 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import BlogCard from '@/components/blog/BlogCard';
 import SearchBar from '@/components/blog/SearchBar';
-import { searchPosts } from '@/lib/api';
+import { getAllPosts } from '@/lib/api';
+import lunr from 'lunr';
 
 const SearchPage = () => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ReturnType<typeof searchPosts>>([]);
+  const [searchResults, setSearchResults] = useState<ReturnType<typeof getAllPosts>>([]);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Create a Lunr index for all posts
+  const searchIndex = useMemo(() => {
+    const allPosts = getAllPosts();
+    
+    return lunr(function() {
+      this.field('title', { boost: 10 });
+      this.field('excerpt', { boost: 5 });
+      this.field('content', { boost: 2 });
+      this.field('categories');
+      this.field('tags');
+      this.ref('id');
+      
+      // Add each post to the index
+      allPosts.forEach(post => {
+        this.add({
+          id: post.id,
+          title: post.title,
+          excerpt: post.excerpt,
+          content: post.content,
+          categories: post.categories.join(' '),
+          tags: post.tags.join(' '),
+        });
+      });
+    });
+  }, []);
+  
+  // All posts to match against search results
+  const allPosts = useMemo(() => getAllPosts(), []);
 
   // Extract search query from URL if present
   useEffect(() => {
@@ -32,10 +62,34 @@ const SearchPage = () => {
     url.searchParams.set('q', query);
     window.history.pushState({}, '', url);
     
-    // Simulate search delay for better UX
+    // Implement search with delay for better UX
     setTimeout(() => {
-      const results = searchPosts(query);
-      setSearchResults(results);
+      if (query.trim() === '') {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+      
+      try {
+        // Use Lunr to search
+        const results = searchIndex.search(query);
+        // Map IDs back to full posts
+        const posts = results.map(result => 
+          allPosts.find(post => post.id === result.ref)
+        ).filter(Boolean) as ReturnType<typeof getAllPosts>;
+        
+        setSearchResults(posts);
+      } catch (e) {
+        // Fallback for cases where the Lunr query syntax might be invalid
+        console.error("Search error:", e);
+        // Use simple filtering as fallback
+        const filteredPosts = allPosts.filter(post => 
+          post.title.toLowerCase().includes(query.toLowerCase()) || 
+          post.excerpt.toLowerCase().includes(query.toLowerCase())
+        );
+        setSearchResults(filteredPosts);
+      }
+      
       setIsSearching(false);
     }, 500);
   };

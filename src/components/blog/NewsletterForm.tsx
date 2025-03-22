@@ -10,20 +10,41 @@ const NewsletterForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Replace 'YOUR_NEWSLETTER_FORMSPREE_ENDPOINT' with your actual Formspree endpoint
+      const response = await fetch('https://formspree.io/f/YOUR_NEWSLETTER_FORMSPREE_ENDPOINT', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email })
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Subscription successful!",
+          description: "Thank you for subscribing to our newsletter.",
+          duration: 5000,
+        });
+        setEmail('');
+      } else {
+        throw new Error('Newsletter subscription failed');
+      }
+    } catch (error) {
       toast({
-        title: "Subscription successful!",
-        description: "Thank you for subscribing to our newsletter.",
+        title: "Subscription failed",
+        description: "There was an issue subscribing to the newsletter. Please try again.",
+        variant: "destructive",
         duration: 5000,
       });
-      setEmail('');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
