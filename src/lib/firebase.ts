@@ -5,12 +5,12 @@ import { getStorage } from "firebase/storage";
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // Replace with your Firebase API key
-  authDomain: "YOUR_AUTH_DOMAIN", // Replace with your Firebase auth domain
-  projectId: "YOUR_PROJECT_ID", // Replace with your Firebase project ID
-  storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your Firebase storage bucket
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your Firebase messaging sender ID
-  appId: "YOUR_APP_ID" // Replace with your Firebase app ID
+  apiKey: "AIzaSyAIy28aihffLgaRWaNhYr8eNg2Mib_hvkA",
+  authDomain: "soul-brew-blog.firebaseapp.com",
+  projectId: "soul-brew-blog",
+  storageBucket: "soul-brew-blog.firebasestorage.app",
+  messagingSenderId: "100365349543",
+  appId: "1:100365349543:web:27d10618e1f8957fb42182"
 };
 
 // Initialize Firebase
