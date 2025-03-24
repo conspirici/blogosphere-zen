@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, Search, Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import AdminNavLink from '@/components/admin/AdminNavLink';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -56,6 +57,7 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+            <AdminNavLink />
             <Button variant="ghost" size="icon" onClick={() => window.location.href = '/search'} aria-label="Search">
               <Search className="h-5 w-5" />
             </Button>
@@ -91,6 +93,7 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
+              <AdminNavLink />
             </div>
           </div>
         )}
