@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import BlogCard from '@/components/blog/BlogCard';
@@ -8,6 +8,8 @@ import Pagination from '@/components/blog/Pagination';
 import SearchBar from '@/components/blog/SearchBar';
 import NewsletterForm from '@/components/blog/NewsletterForm';
 import { getAllPosts, getAllCategories } from '@/lib/api';
+import { useFetch } from '@/hooks/useFetch';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const BlogPage = () => {
   const { category } = useParams<{ category?: string }>();
@@ -19,11 +21,11 @@ const BlogPage = () => {
   const postsPerPage = 9;
   
   // Get all posts and categories
-  const allPosts = getAllPosts();
-  const categories = getAllCategories();
+  const { data: allPosts, loading: loadingPosts } = useFetch(getAllPosts);
+  const { data: categories, loading: loadingCategories } = useFetch(getAllCategories);
   
   // Filter posts based on search query and category
-  const filteredPosts = allPosts.filter(post => {
+  const filteredPosts = allPosts ? allPosts.filter(post => {
     const matchesSearch = searchQuery 
       ? post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -35,7 +37,7 @@ const BlogPage = () => {
       : true;
       
     return matchesSearch && matchesCategory;
-  });
+  }) : [];
   
   // Calculate pagination
   const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
@@ -79,11 +81,22 @@ const BlogPage = () => {
           {/* Search and Filter */}
           <div className="grid md:grid-cols-[1fr_300px] gap-6 mb-8">
             <SearchBar onSearch={handleSearch} />
-            <CategoryFilter 
-              categories={categories}
-              selectedCategory={selectedCategory}
-              onSelectCategory={handleCategorySelect}
-            />
+            {loadingCategories ? (
+              <div className="animate-pulse">
+                <Skeleton className="h-8 w-full mb-2" />
+                <div className="flex gap-2">
+                  {[1, 2, 3].map(i => (
+                    <Skeleton key={i} className="h-6 w-24 rounded-full" />
+                  ))}
+                </div>
+              </div>
+            ) : categories ? (
+              <CategoryFilter 
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={handleCategorySelect}
+              />
+            ) : null}
           </div>
           
           {/* Results Info */}
@@ -96,7 +109,18 @@ const BlogPage = () => {
           )}
           
           {/* Posts Grid */}
-          {paginatedPosts.length > 0 ? (
+          {loadingPosts ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="animate-pulse">
+                  <Skeleton className="h-48 w-full rounded-lg mb-4" />
+                  <Skeleton className="h-4 w-1/4 mb-2" />
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : paginatedPosts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {paginatedPosts.map((post, index) => (
                 <div key={post.id} style={{ animationDelay: `${index * 100}ms` }}>
@@ -135,11 +159,13 @@ const BlogPage = () => {
           )}
           
           {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
+          {!loadingPosts && filteredPosts.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          )}
         </div>
       </section>
       

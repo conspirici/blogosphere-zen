@@ -5,17 +5,22 @@ import Layout from '@/components/layout/Layout';
 import BlogCard from '@/components/blog/BlogCard';
 import SearchBar from '@/components/blog/SearchBar';
 import { getAllPosts } from '@/lib/api';
+import { useFetch } from '@/hooks/useFetch';
 import lunr from 'lunr';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const SearchPage = () => {
   const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<ReturnType<typeof getAllPosts>>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Get all posts
+  const { data: allPosts, loading: loadingPosts } = useFetch(getAllPosts);
   
   // Create a Lunr index for all posts
   const searchIndex = useMemo(() => {
-    const allPosts = getAllPosts();
+    if (!allPosts) return null;
     
     return lunr(function() {
       this.field('title', { boost: 10 });
@@ -37,10 +42,7 @@ const SearchPage = () => {
         });
       });
     });
-  }, []);
-  
-  // All posts to match against search results
-  const allPosts = useMemo(() => getAllPosts(), []);
+  }, [allPosts]);
 
   // Extract search query from URL if present
   useEffect(() => {
@@ -51,9 +53,11 @@ const SearchPage = () => {
       setSearchQuery(q);
       handleSearch(q);
     }
-  }, [location.search]);
+  }, [location.search, allPosts]);
 
   const handleSearch = (query: string) => {
+    if (!allPosts) return;
+    
     setIsSearching(true);
     setSearchQuery(query);
     
@@ -71,14 +75,23 @@ const SearchPage = () => {
       }
       
       try {
-        // Use Lunr to search
-        const results = searchIndex.search(query);
-        // Map IDs back to full posts
-        const posts = results.map(result => 
-          allPosts.find(post => post.id === result.ref)
-        ).filter(Boolean) as ReturnType<typeof getAllPosts>;
-        
-        setSearchResults(posts);
+        // Use Lunr to search if index is available
+        if (searchIndex) {
+          const results = searchIndex.search(query);
+          // Map IDs back to full posts
+          const posts = results
+            .map(result => allPosts.find(post => post.id === result.ref))
+            .filter(Boolean);
+          
+          setSearchResults(posts);
+        } else {
+          // Simple filtering as fallback
+          const filteredPosts = allPosts.filter(post => 
+            post.title.toLowerCase().includes(query.toLowerCase()) || 
+            post.excerpt.toLowerCase().includes(query.toLowerCase())
+          );
+          setSearchResults(filteredPosts);
+        }
       } catch (e) {
         // Fallback for cases where the Lunr query syntax might be invalid
         console.error("Search error:", e);
@@ -109,6 +122,7 @@ const SearchPage = () => {
             <SearchBar 
               onSearch={handleSearch} 
               placeholder="Type keywords and press Enter to search..."
+              initialQuery={searchQuery}
             />
           </div>
           
@@ -116,7 +130,7 @@ const SearchPage = () => {
           {searchQuery && (
             <div className="mb-6 animate-fade-in">
               <h2 className="font-serif text-xl font-semibold mb-2">
-                {isSearching ? 'Searching...' : (
+                {isSearching || loadingPosts ? 'Searching...' : (
                   `${searchResults.length} ${searchResults.length === 1 ? 'result' : 'results'} for "${searchQuery}"`
                 )}
               </h2>
@@ -125,21 +139,21 @@ const SearchPage = () => {
           )}
           
           {/* Loading State */}
-          {isSearching && (
+          {(isSearching || loadingPosts) && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="bg-muted rounded-lg h-48 mb-4"></div>
-                  <div className="h-4 bg-muted rounded w-1/4 mb-2"></div>
-                  <div className="h-6 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-4 bg-muted rounded w-2/3"></div>
+                  <Skeleton className="h-48 w-full rounded-lg mb-4" />
+                  <Skeleton className="h-4 w-1/4 mb-2" />
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
                 </div>
               ))}
             </div>
           )}
           
           {/* Results */}
-          {!isSearching && searchQuery && (
+          {!isSearching && !loadingPosts && searchQuery && (
             <>
               {searchResults.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -162,7 +176,7 @@ const SearchPage = () => {
           )}
           
           {/* Empty State */}
-          {!searchQuery && !isSearching && (
+          {!searchQuery && !isSearching && !loadingPosts && (
             <div className="text-center py-12 animate-fade-in">
               <p className="text-muted-foreground">
                 Enter keywords above to search for articles, categories, or topics.

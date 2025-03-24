@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Share2, Calendar, Tag } from 'lucide-react';
 import { getPostBySlug, getRelatedPosts } from '@/lib/api';
 import { useToast } from '@/components/ui/use-toast';
+import { useFetchWithParams } from '@/hooks/useFetch';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -18,16 +20,60 @@ const BlogPost = () => {
   const { toast } = useToast();
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   
-  // Get post data
-  const post = slug ? getPostBySlug(slug) : null;
-  const relatedPosts = slug ? getRelatedPosts(slug, 3) : [];
+  // Get post data using custom hook
+  const { 
+    data: post, 
+    loading: loadingPost, 
+    error: postError 
+  } = useFetchWithParams(getPostBySlug, slug || '');
+  
+  // Get related posts
+  const { 
+    data: relatedPosts, 
+    loading: loadingRelated 
+  } = useFetchWithParams(getRelatedPosts, slug || '');
   
   // Handle 404
   useEffect(() => {
-    if (!post && slug) {
+    if (!loadingPost && !post && slug) {
       navigate('/not-found', { replace: true });
     }
-  }, [post, slug, navigate]);
+  }, [post, loadingPost, slug, navigate]);
+  
+  // Display loading state while fetching data
+  if (loadingPost) {
+    return (
+      <Layout>
+        <section className="pt-8 md:pt-12">
+          <div className="container-blog max-w-4xl">
+            <div className="mb-8">
+              <Button variant="ghost" onClick={() => navigate(-1)} className="group flex items-center text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+                Back
+              </Button>
+            </div>
+            
+            <div className="space-y-4 animate-pulse">
+              <div className="flex gap-2 mb-4">
+                {[1, 2].map(i => (
+                  <Skeleton key={i} className="h-6 w-24 rounded-full" />
+                ))}
+              </div>
+              <Skeleton className="h-12 w-3/4" />
+              <div className="flex gap-4 items-center mb-6">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <div>
+                  <Skeleton className="h-5 w-32 mb-1" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+              </div>
+              <Skeleton className="w-full h-72 rounded-lg" />
+            </div>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
   
   if (!post) {
     return null;
@@ -178,7 +224,23 @@ const BlogPost = () => {
       </section>
       
       {/* Related Posts */}
-      {relatedPosts.length > 0 && (
+      {loadingRelated ? (
+        <section className="py-16 bg-secondary/30">
+          <div className="container-blog">
+            <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-8 text-center">Related Posts</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="animate-pulse">
+                  <Skeleton className="h-48 w-full rounded-lg mb-4" />
+                  <Skeleton className="h-4 w-1/4 mb-2" />
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : relatedPosts && relatedPosts.length > 0 ? (
         <section className="py-16 bg-secondary/30">
           <div className="container-blog">
             <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-8 text-center">Related Posts</h2>
@@ -192,7 +254,7 @@ const BlogPost = () => {
             </div>
           </div>
         </section>
-      )}
+      ) : null}
     </Layout>
   );
 };

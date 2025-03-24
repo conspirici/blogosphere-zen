@@ -1,28 +1,45 @@
 
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import BlogCard from '@/components/blog/BlogCard';
 import { getPostsByCategory, getAllCategories } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useFetch, useFetchWithParams } from '@/hooks/useFetch';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CategoryPage = () => {
   const { category } = useParams<{ category: string }>();
   const navigate = useNavigate();
   
-  const allCategories = getAllCategories();
-  const isValidCategory = category && allCategories.some(
-    cat => cat.toLowerCase() === category.toLowerCase()
+  const { data: allCategories, loading: loadingCategories } = useFetch(getAllCategories);
+  const { data: posts, loading: loadingPosts } = useFetchWithParams(
+    getPostsByCategory, 
+    category || ''
   );
   
-  const displayCategory = isValidCategory
+  const isValidCategory = !loadingCategories && allCategories && category && 
+    allCategories.some(cat => cat.toLowerCase() === category.toLowerCase());
+  
+  const displayCategory = !loadingCategories && isValidCategory && allCategories
     ? allCategories.find(cat => cat.toLowerCase() === category?.toLowerCase())
     : '';
-    
-  const posts = category ? getPostsByCategory(category) : [];
 
-  if (!isValidCategory) {
+  if (loadingCategories) {
+    return (
+      <Layout>
+        <div className="container-blog py-16">
+          <div className="animate-pulse space-y-4">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-12 w-64 mx-auto" />
+            <Skeleton className="h-4 w-96 mx-auto" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!isValidCategory && !loadingCategories) {
     return (
       <Layout>
         <div className="container-blog py-24 text-center">
@@ -60,7 +77,18 @@ const CategoryPage = () => {
             </p>
           </div>
           
-          {posts.length > 0 ? (
+          {loadingPosts ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="animate-pulse">
+                  <Skeleton className="h-48 w-full rounded-lg mb-4" />
+                  <Skeleton className="h-4 w-1/4 mb-2" />
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  <Skeleton className="h-4 w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : posts && posts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {posts.map((post, index) => (
                 <div key={post.id} style={{ animationDelay: `${index * 100}ms` }}>

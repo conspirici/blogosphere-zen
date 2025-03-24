@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import lunr from 'lunr';
-import { getAllPosts } from '@/lib/api';
+import { getAllPosts, Post } from '@/lib/api';
+import { useFetch } from '@/hooks/useFetch';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
@@ -20,11 +21,11 @@ const SearchBar = ({
 }: SearchBarProps) => {
   const [query, setQuery] = useState(initialQuery);
   const [searchIndex, setSearchIndex] = useState<lunr.Index | null>(null);
+  const { data: posts } = useFetch(getAllPosts);
 
   // Initialize lunr search index if useIndex is true
   useEffect(() => {
-    if (useIndex) {
-      const posts = getAllPosts();
+    if (useIndex && posts && posts.length > 0) {
       const idx = lunr(function() {
         this.field('title', { boost: 10 });
         this.field('excerpt', { boost: 5 });
@@ -47,7 +48,7 @@ const SearchBar = ({
       
       setSearchIndex(idx);
     }
-  }, [useIndex]);
+  }, [useIndex, posts]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
