@@ -1,8 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { getPostBySlug, Post } from '@/lib/api';
+import { getPostBySlug, savePost, getAllCategories, saveCategory } from '@/lib/api';
+import { Post } from '@/lib/api';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,11 +17,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Save, Eye } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Loader2, Plus } from 'lucide-react';
 import slugify from 'slugify';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
-import { getAllCategories } from '@/lib/api';
+import { toast } from 'sonner';
+import { getCurrentUser } from '@/lib/firebase';
 
 // Rich text editor modules configuration
 const quillModules = {
@@ -60,33 +61,59 @@ const initialPostState: Post = {
 const BlogEditor = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [post, setPost] = useState<Post>(initialPostState);
   const [htmlContent, setHtmlContent] = useState('');
   const [isEditMode, setIsEditMode] = useState(!!slug);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(!!slug);
   const [previewMode, setPreviewMode] = useState(false);
   const [tagsInput, setTagsInput] = useState('');
-  const [allCategories] = useState(getAllCategories());
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [newCategory, setNewCategory] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
+
+  // Load categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await getAllCategories();
+        setAllCategories(categories);
+      } catch (error) {
+        console.error("Error loading categories:", error);
+        toast.error("Failed to load categories");
+      }
+    };
+    
+    loadCategories();
+  }, []);
 
   // Fetch existing post data if in edit mode
   useEffect(() => {
-    if (slug) {
-      const existingPost = getPostBySlug(slug);
-      if (existingPost) {
-        setPost(existingPost);
-        setHtmlContent(existingPost.content);
-        setTagsInput(existingPost.tags.join(', '));
-      } else {
-        toast({
-          title: "Post not found",
-          description: `Could not find a post with slug: ${slug}`,
-          variant: "destructive",
-        });
-        navigate('/admin');
+    const loadPost = async () => {
+      if (slug) {
+        setIsLoading(true);
+        try {
+          const existingPost = await getPostBySlug(slug);
+          if (existingPost) {
+            setPost(existingPost);
+            setHtmlContent(existingPost.content);
+            setTagsInput(existingPost.tags.join(', '));
+          } else {
+            toast.error(`Could not find a post with slug: ${slug}`);
+            navigate('/admin');
+          }
+        } catch (error) {
+          console.error("Error loading post:", error);
+          toast.error("Failed to load post");
+          navigate('/admin');
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
-  }, [slug, navigate, toast]);
+    };
+    
+    loadPost();
+  }, [slug, navigate]);
 
   // Generate slug from title
   const generateSlug = useCallback(() => {
@@ -122,6 +149,25 @@ const BlogEditor = () => {
     }
   };
 
+  // Add new category
+  const handleAddCategory = async () => {
+    if (!newCategory.trim()) return;
+    
+    setAddingCategory(true);
+    try {
+      await saveCategory(newCategory.trim());
+      setAllCategories(prev => [...prev, newCategory.trim()].sort());
+      handleCategoryChange(newCategory.trim());
+      setNewCategory('');
+      toast.success(`Added category: ${newCategory.trim()}`);
+    } catch (error) {
+      console.error("Error adding category:", error);
+      toast.error("Failed to add category");
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
   // Remove category
   const handleRemoveCategory = (categoryName: string) => {
     setPost(prev => ({
@@ -144,11 +190,7 @@ const BlogEditor = () => {
     try {
       // Validate required fields
       if (!post.title || !post.content || !post.excerpt) {
-        toast({
-          title: "Missing information",
-          description: "Please fill in all required fields (title, excerpt, content)",
-          variant: "destructive",
-        });
+        toast.error("Please fill in all required fields (title, excerpt, content)");
         setIsSaving(false);
         return;
       }
@@ -158,27 +200,42 @@ const BlogEditor = () => {
         generateSlug();
       }
       
-      // In a real app, you would save to a database or API here
-      // For now, let's just show a success message
+      // Set author information from current user
+      const user = getCurrentUser();
+      if (user) {
+        post.author = {
+          name: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+          avatar: user.photoURL || 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&h=400&fit=crop'
+        };
+      }
       
-      toast({
-        title: isEditMode ? "Post updated" : "Post created",
-        description: `Your post "${post.title}" has been ${isEditMode ? 'updated' : 'created'} successfully`,
-      });
+      // Save to Firestore
+      await savePost(post, !isEditMode);
+      
+      toast.success(`Your post "${post.title}" has been ${isEditMode ? 'updated' : 'created'} successfully`);
       
       // Navigate back to admin dashboard
       navigate('/admin');
     } catch (error) {
       console.error("Error saving post:", error);
-      toast({
-        title: "Error",
-        description: "Failed to save post. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to save post. Please try again.");
     } finally {
       setIsSaving(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="container py-8 flex items-center justify-center" style={{ minHeight: "60vh" }}>
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p>Loading post...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -210,7 +267,7 @@ const BlogEditor = () => {
               className="flex items-center gap-2"
             >
               {isSaving && (
-                <span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></span>
+                <Loader2 className="h-4 w-4 animate-spin" />
               )}
               <Save className="h-4 w-4" />
               Save {isEditMode ? 'Changes' : 'Post'}
@@ -331,20 +388,46 @@ const BlogEditor = () => {
                     ))}
                   </div>
                   
-                  <Select onValueChange={handleCategoryChange}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Add category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allCategories
-                        .filter(cat => !post.categories.includes(cat))
-                        .map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                    <div className="md:col-span-4">
+                      <Select onValueChange={handleCategoryChange}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allCategories
+                            .filter(cat => !post.categories.includes(cat))
+                            .map(category => (
+                              <SelectItem key={category} value={category}>
+                                {category}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-2 items-center md:col-span-4 mt-2">
+                      <Input
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        placeholder="Add new category"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                      />
+                      <Button 
+                        type="button" 
+                        variant="secondary"
+                        onClick={handleAddCategory}
+                        disabled={addingCategory || !newCategory.trim()}
+                        className="whitespace-nowrap"
+                      >
+                        {addingCategory ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : (
+                          <Plus className="h-4 w-4 mr-2" />
+                        )}
+                        Add
+                      </Button>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">

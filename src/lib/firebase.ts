@@ -2,6 +2,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getStorage } from "firebase/storage";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, query, orderBy } from "firebase/firestore";
 import { toast } from "sonner";
 
 // Firebase configuration
@@ -24,6 +25,7 @@ if (!getApps().length) {
 
 const auth = getAuth(app);
 const storage = getStorage(app);
+const firestore = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 // Sign in with Google
@@ -55,4 +57,4 @@ export const getCurrentUser = () => {
   return auth.currentUser;
 };
 
-export { auth, storage };
+export { auth, storage, firestore };

@@ -2,12 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { getAllPosts } from '@/lib/api';
+import { getAllPosts, deletePost } from '@/lib/api';
 import { signOutUser } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Table, 
   TableBody, 
@@ -23,29 +21,55 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { 
   Plus, 
   Search, 
   Edit, 
   Trash, 
   Eye, 
   MoreVertical, 
-  FileText 
+  FileText,
+  Loader2
 } from 'lucide-react';
 import SearchBar from '@/components/blog/SearchBar';
 import { Post } from '@/lib/api';
+import { toast } from 'sonner';
 
 const AdminDashboard = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [postToDelete, setPostToDelete] = useState<Post | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { user } = useAuth();
-  const { toast } = useToast();
+
+  // Load posts from Firestore
+  const loadPosts = async () => {
+    setIsLoading(true);
+    try {
+      const allPosts = await getAllPosts();
+      setPosts(allPosts);
+      setFilteredPosts(allPosts);
+    } catch (error) {
+      console.error("Error loading posts:", error);
+      toast.error("Failed to load posts");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Load all posts
-    const allPosts = getAllPosts();
-    setPosts(allPosts);
-    setFilteredPosts(allPosts);
+    loadPosts();
   }, []);
 
   const handleSearch = (query: string) => {
@@ -66,16 +90,26 @@ const AdminDashboard = () => {
   const handleSignOut = async () => {
     try {
       await signOutUser();
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully",
-      });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sign out. Please try again.",
-        variant: "destructive",
-      });
+      console.error("Error signing out:", error);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!postToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await deletePost(postToDelete.id);
+      toast.success("Post deleted successfully");
+      // Refresh the posts list
+      loadPosts();
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast.error("Failed to delete post");
+    } finally {
+      setIsDeleting(false);
+      setPostToDelete(null);
     }
   };
 
@@ -119,7 +153,16 @@ const AdminDashboard = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPosts.length > 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center h-24">
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="ml-2">Loading posts...</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredPosts.length > 0 ? (
                 filteredPosts.map((post) => (
                   <TableRow key={post.id}>
                     <TableCell className="font-medium">{post.title}</TableCell>
@@ -157,7 +200,10 @@ const AdminDashboard = () => {
                               View
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive flex items-center gap-2">
+                          <DropdownMenuItem 
+                            className="text-destructive flex items-center gap-2"
+                            onClick={() => setPostToDelete(post)}
+                          >
                             <Trash className="h-4 w-4" />
                             Delete
                           </DropdownMenuItem>
@@ -189,6 +235,30 @@ const AdminDashboard = () => {
           </Table>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!postToDelete} onOpenChange={(open) => !open && setPostToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the post 
+              "{postToDelete?.title}".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePost}
+              className="bg-destructive text-destructive-foreground"
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
