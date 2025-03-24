@@ -1,7 +1,8 @@
 
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getStorage } from "firebase/storage";
+import { toast } from "sonner";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -13,8 +14,14 @@ const firebaseConfig = {
   appId: "1:100365349543:web:27d10618e1f8957fb42182"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase - prevent duplicate initialization
+let app;
+if (!getApps().length) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
+
 const auth = getAuth(app);
 const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
@@ -26,6 +33,7 @@ export const signInWithGoogle = async () => {
     return result.user;
   } catch (error) {
     console.error("Error signing in with Google: ", error);
+    toast.error("Failed to sign in with Google. Please make sure third-party cookies are enabled and try again.");
     throw error;
   }
 };
@@ -34,8 +42,10 @@ export const signInWithGoogle = async () => {
 export const signOutUser = async () => {
   try {
     await signOut(auth);
+    toast.success("Successfully signed out");
   } catch (error) {
     console.error("Error signing out: ", error);
+    toast.error("Failed to sign out");
     throw error;
   }
 };

@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/layout/Layout';
+import { toast } from 'sonner';
 
 const ALLOWED_ADMIN_EMAIL = 'sydmnsur@gmail.com';
 
@@ -13,7 +14,7 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   // If user is already logged in and is admin, redirect to dashboard
   if (user && user.email === ALLOWED_ADMIN_EMAIL) {
@@ -27,27 +28,15 @@ const AdminLogin = () => {
       const user = await signInWithGoogle();
       
       if (user.email !== ALLOWED_ADMIN_EMAIL) {
-        toast({
-          title: "Access denied",
-          description: "You don't have admin permissions",
-          variant: "destructive",
-        });
+        toast.error("You don't have admin permissions");
         return;
       }
       
-      toast({
-        title: "Login successful",
-        description: "Welcome to the admin dashboard",
-      });
-      
+      toast.success("Welcome to the admin dashboard");
       navigate('/admin');
     } catch (error) {
       console.error("Login error:", error);
-      toast({
-        title: "Login failed",
-        description: "There was a problem signing in. Please try again.",
-        variant: "destructive",
-      });
+      // Error is already handled in signInWithGoogle
     } finally {
       setIsLoading(false);
     }
