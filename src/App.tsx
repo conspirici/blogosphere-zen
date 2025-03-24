@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
+import { AuthProvider } from "@/context/AuthContext";
 
 // Pages
 import Index from "./pages/Index";
@@ -16,6 +17,10 @@ import SearchPage from "./pages/SearchPage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
 import NotFound from "./pages/NotFound";
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
+import BlogEditor from "./pages/admin/BlogEditor";
 
 const queryClient = new QueryClient();
 
@@ -29,23 +34,44 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/blogs" element={<BlogPage />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/categories" element={<CategoriesPage />} />
-            <Route path="/categories/:category" element={<CategoryPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="/about" element={<AboutPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/blogs" element={<BlogPage />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/categories" element={<CategoriesPage />} />
+              <Route path="/categories/:category" element={<CategoryPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={
+                <AdminProtectedRoute>
+                  <AdminDashboard />
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/blog/new" element={
+                <AdminProtectedRoute>
+                  <BlogEditor />
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/blog/edit/:slug" element={
+                <AdminProtectedRoute>
+                  <BlogEditor />
+                </AdminProtectedRoute>
+              } />
+              
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 };
