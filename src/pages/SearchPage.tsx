@@ -6,8 +6,8 @@ import BlogCard from '@/components/blog/BlogCard';
 import SearchBar from '@/components/blog/SearchBar';
 import { getAllPosts } from '@/lib/api';
 import { useFetch } from '@/hooks/useFetch';
-import lunr from 'lunr';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Helmet } from 'react-helmet-async';
 
 const SearchPage = () => {
   const location = useLocation();
@@ -15,35 +15,11 @@ const SearchPage = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   
-  // Get all posts
-  const { data: allPosts, loading: loadingPosts } = useFetch(getAllPosts);
+  // Get all posts with caching enabled
+  const { data: allPosts, loading: loadingPosts } = useFetch(getAllPosts, {
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  });
   
-  // Create a Lunr index for all posts
-  const searchIndex = useMemo(() => {
-    if (!allPosts) return null;
-    
-    return lunr(function() {
-      this.field('title', { boost: 10 });
-      this.field('excerpt', { boost: 5 });
-      this.field('content', { boost: 2 });
-      this.field('categories');
-      this.field('tags');
-      this.ref('id');
-      
-      // Add each post to the index
-      allPosts.forEach(post => {
-        this.add({
-          id: post.id,
-          title: post.title,
-          excerpt: post.excerpt,
-          content: post.content,
-          categories: post.categories.join(' '),
-          tags: post.tags.join(' '),
-        });
-      });
-    });
-  }, [allPosts]);
-
   // Extract search query from URL if present
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -51,10 +27,13 @@ const SearchPage = () => {
     
     if (q) {
       setSearchQuery(q);
-      handleSearch(q);
+      if (allPosts) {
+        handleSearch(q);
+      }
     }
   }, [location.search, allPosts]);
 
+  // Search function
   const handleSearch = (query: string) => {
     if (!allPosts) return;
     
@@ -74,41 +53,30 @@ const SearchPage = () => {
         return;
       }
       
-      try {
-        // Use Lunr to search if index is available
-        if (searchIndex) {
-          const results = searchIndex.search(query);
-          // Map IDs back to full posts
-          const posts = results
-            .map(result => allPosts.find(post => post.id === result.ref))
-            .filter(Boolean);
-          
-          setSearchResults(posts);
-        } else {
-          // Simple filtering as fallback
-          const filteredPosts = allPosts.filter(post => 
-            post.title.toLowerCase().includes(query.toLowerCase()) || 
-            post.excerpt.toLowerCase().includes(query.toLowerCase())
-          );
-          setSearchResults(filteredPosts);
-        }
-      } catch (e) {
-        // Fallback for cases where the Lunr query syntax might be invalid
-        console.error("Search error:", e);
-        // Use simple filtering as fallback
-        const filteredPosts = allPosts.filter(post => 
-          post.title.toLowerCase().includes(query.toLowerCase()) || 
-          post.excerpt.toLowerCase().includes(query.toLowerCase())
-        );
-        setSearchResults(filteredPosts);
-      }
+      const lowercaseQuery = query.toLowerCase();
       
+      // Simple search
+      const filteredPosts = allPosts.filter(post => 
+        post.title.toLowerCase().includes(lowercaseQuery) || 
+        post.excerpt.toLowerCase().includes(lowercaseQuery) ||
+        post.content.toLowerCase().includes(lowercaseQuery) ||
+        post.categories.some((cat: string) => cat.toLowerCase().includes(lowercaseQuery)) ||
+        post.tags.some((tag: string) => tag.toLowerCase().includes(lowercaseQuery))
+      );
+      
+      setSearchResults(filteredPosts);
       setIsSearching(false);
-    }, 500);
+    }, 300);
   };
 
   return (
     <Layout>
+      <Helmet>
+        <title>Search | Soul Brew Blog</title>
+        <meta name="description" content="Search for articles, tutorials, and more on Soul Brew Blog - your technology blog for web development, hosting, and digital solutions." />
+        <meta name="robots" content="noindex" />
+      </Helmet>
+      
       <section className="py-16">
         <div className="container-blog max-w-4xl">
           <div className="text-center mb-12 animate-fade-in">
@@ -158,7 +126,7 @@ const SearchPage = () => {
               {searchResults.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {searchResults.map((post, index) => (
-                    <div key={post.id} style={{ animationDelay: `${index * 100}ms` }}>
+                    <div key={post.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-fade-in">
                       <BlogCard blog={post} />
                     </div>
                   ))}

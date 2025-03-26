@@ -32,6 +32,11 @@ const Navbar = () => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    // Check if dark mode is already set
+    setIsDarkMode(document.documentElement.classList.contains('dark'));
+  }, []);
+
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode);
     document.documentElement.classList.toggle('dark');
@@ -43,7 +48,7 @@ const Navbar = () => {
         <nav className="flex items-center justify-between">
           {/* Logo */}
           <Link to="/" className="font-serif text-xl font-bold transition-opacity hover:opacity-80">
-            Blogosphere
+            Soul Brew Blog
           </Link>
 
           {/* Desktop Nav */}

@@ -8,9 +8,9 @@ const Footer = () => {
       <div className="container-blog">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
-            <h3 className="text-lg font-serif font-semibold">Blogosphere</h3>
+            <h3 className="text-lg font-serif font-semibold">Soul Brew Blog</h3>
             <p className="text-muted-foreground">
-              A minimalist blog focusing on lifestyle, design, and sustainability.
+              A technology blog about web development, hosting, and digital solutions.
             </p>
             <div className="flex space-x-4">
               <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -42,11 +42,11 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-serif font-semibold">Categories</h3>
             <ul className="space-y-2">
-              <li><Link to="/categories/minimalism" className="text-muted-foreground hover:text-foreground transition-colors">Minimalism</Link></li>
-              <li><Link to="/categories/sustainability" className="text-muted-foreground hover:text-foreground transition-colors">Sustainability</Link></li>
-              <li><Link to="/categories/lifestyle" className="text-muted-foreground hover:text-foreground transition-colors">Lifestyle</Link></li>
+              <li><Link to="/categories/web-development" className="text-muted-foreground hover:text-foreground transition-colors">Web Development</Link></li>
+              <li><Link to="/categories/hosting" className="text-muted-foreground hover:text-foreground transition-colors">Hosting</Link></li>
+              <li><Link to="/categories/technologies" className="text-muted-foreground hover:text-foreground transition-colors">Technologies</Link></li>
               <li><Link to="/categories/design" className="text-muted-foreground hover:text-foreground transition-colors">Design</Link></li>
-              <li><Link to="/categories/travel" className="text-muted-foreground hover:text-foreground transition-colors">Travel</Link></li>
+              <li><Link to="/categories/tutorials" className="text-muted-foreground hover:text-foreground transition-colors">Tutorials</Link></li>
             </ul>
           </div>
 
@@ -73,7 +73,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Blogosphere. All rights reserved.</p>
+          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} Soul Brew Blog. All rights reserved.</p>
           <div className="flex space-x-4 mt-4 sm:mt-0">
             <Link to="/privacy-policy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
             <Link to="/terms-and-conditions" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Terms and Conditions</Link>

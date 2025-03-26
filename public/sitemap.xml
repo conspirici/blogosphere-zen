@@ -26,4 +26,5 @@
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <!-- Regularly add new blog posts to this sitemap -->
 </urlset>
