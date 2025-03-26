@@ -9,18 +9,20 @@ interface TOCItem {
 }
 
 interface TableOfContentsProps {
-  articleId: string;
+  content: string; // Changed from articleId to content
 }
 
-const TableOfContents = ({ articleId }: TableOfContentsProps) => {
+const TableOfContents = ({ content }: TableOfContentsProps) => {
   const [headings, setHeadings] = useState<TOCItem[]>([]);
   const [activeId, setActiveId] = useState<string>('');
 
   useEffect(() => {
-    const article = document.getElementById(articleId);
-    if (!article) return;
-
-    const elements = Array.from(article.querySelectorAll('h2, h3, h4'));
+    // Create a temporary div to parse the HTML content
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = content;
+    
+    // Find all headings in the content
+    const elements = Array.from(tempDiv.querySelectorAll('h2, h3, h4'));
     const items: TOCItem[] = elements.map((heading) => {
       const id = heading.id || heading.textContent?.toLowerCase().replace(/\s+/g, '-') || '';
       if (!heading.id) {
@@ -36,23 +38,38 @@ const TableOfContents = ({ articleId }: TableOfContentsProps) => {
 
     setHeadings(items);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
-        });
-      },
-      { rootMargin: '0px 0px -80% 0px' }
-    );
+    // Set up intersection observer for the actual DOM elements after they're rendered
+    const setupObserver = () => {
+      const article = document.querySelector('.blog-content');
+      if (!article) return;
 
-    elements.forEach((heading) => observer.observe(heading));
+      const headingElements = Array.from(article.querySelectorAll('h2, h3, h4'));
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveId(entry.target.id);
+            }
+          });
+        },
+        { rootMargin: '0px 0px -80% 0px' }
+      );
 
-    return () => {
-      elements.forEach((heading) => observer.unobserve(heading));
+      headingElements.forEach((heading) => observer.observe(heading));
+
+      return () => {
+        headingElements.forEach((heading) => observer.unobserve(heading));
+      };
     };
-  }, [articleId]);
+
+    // Set a small timeout to ensure the DOM has updated with the parsed content
+    const timeoutId = setTimeout(setupObserver, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [content]); // Dependency on content instead of articleId
 
   if (headings.length === 0) return null;
 

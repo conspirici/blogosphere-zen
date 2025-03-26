@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface FetchOptions {
@@ -8,6 +7,7 @@ interface FetchOptions {
   staleTime?: number;
   retries?: number;
   retryDelay?: number;
+  enabled?: boolean;
 }
 
 const defaultOptions: FetchOptions = {
@@ -16,7 +16,8 @@ const defaultOptions: FetchOptions = {
   cacheTime: 5 * 60 * 1000, // 5 minutes
   staleTime: 60 * 1000, // 1 minute
   retries: 1,
-  retryDelay: 1000
+  retryDelay: 1000,
+  enabled: true
 };
 
 // In-memory cache for faster data access
