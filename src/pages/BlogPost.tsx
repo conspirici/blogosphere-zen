@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import TableOfContents from '@/components/blog/TableOfContents';
@@ -13,6 +13,7 @@ import { getPostBySlug, getRelatedPosts } from '@/lib/api';
 import { useToast } from '@/components/ui/use-toast';
 import { useFetchWithParams } from '@/hooks/useFetch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Helmet } from 'react-helmet-async';
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -27,11 +28,14 @@ const BlogPost = () => {
     error: postError 
   } = useFetchWithParams(getPostBySlug, slug || '');
   
-  // Get related posts
+  // Get related posts with prefetch
   const { 
     data: relatedPosts, 
     loading: loadingRelated 
-  } = useFetchWithParams(getRelatedPosts, slug || '');
+  } = useFetchWithParams(getRelatedPosts, slug || '', {
+    suspense: false,
+    prefetch: true
+  });
   
   // Handle 404
   useEffect(() => {
@@ -79,6 +83,35 @@ const BlogPost = () => {
     return null;
   }
   
+  // Prepare schema.org structured data
+  const articleStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.title,
+    "image": post.image,
+    "datePublished": new Date(post.date).toISOString(),
+    "dateModified": new Date(post.date).toISOString(),
+    "author": {
+      "@type": "Person",
+      "name": post.author.name,
+      "url": `https://soulbrewblog.com/author/${post.author.name.toLowerCase().replace(/\s+/g, '-')}`
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Soul Brew Blog",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://soulbrewblog.com/logo.png"
+      }
+    },
+    "description": post.excerpt,
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": `https://soulbrewblog.com/blog/${post.slug}`
+    },
+    "keywords": post.tags.join(', ')
+  };
+  
   // Share functionality
   const handleShare = () => {
     if (navigator.share) {
@@ -111,11 +144,35 @@ const BlogPost = () => {
     }
   };
   
-  // Format date for SEO
+  // Format date for display and SEO
   const formattedDate = new Date(post.date).toISOString().split('T')[0];
+  const displayDate = new Date(post.date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 
   return (
     <Layout>
+      <Helmet>
+        <title>{post.title} | Soul Brew Blog</title>
+        <meta name="description" content={post.excerpt} />
+        <meta name="keywords" content={post.tags.join(', ')} />
+        <meta property="og:title" content={post.title} />
+        <meta property="og:description" content={post.excerpt} />
+        <meta property="og:image" content={post.image} />
+        <meta property="og:url" content={`https://soulbrewblog.com/blog/${post.slug}`} />
+        <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={post.title} />
+        <meta name="twitter:description" content={post.excerpt} />
+        <meta name="twitter:image" content={post.image} />
+        <link rel="canonical" href={`https://soulbrewblog.com/blog/${post.slug}`} />
+        <script type="application/ld+json">
+          {JSON.stringify(articleStructuredData)}
+        </script>
+      </Helmet>
+      
       {/* Post Header */}
       <section className="pt-8 md:pt-12">
         <div className="container-blog max-w-4xl">
@@ -137,7 +194,7 @@ const BlogPost = () => {
           </div>
           
           {/* Title */}
-          <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold mb-4 animate-fade-in">
+          <h1 className="font-montserrat text-3xl md:text-4xl lg:text-5xl font-bold mb-4 animate-fade-in">
             {post.title}
           </h1>
           
@@ -152,7 +209,7 @@ const BlogPost = () => {
                 <p className="font-medium">{post.author.name}</p>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Calendar className="mr-1 h-3 w-3" />
-                  <time dateTime={formattedDate}>{post.date}</time>
+                  <time dateTime={formattedDate}>{displayDate}</time>
                 </div>
               </div>
             </div>
@@ -175,6 +232,10 @@ const BlogPost = () => {
               alt={post.title}
               className={`w-full h-auto aspect-video object-cover ${isImageLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setIsImageLoaded(true)}
+              loading="lazy"
+              width="1200"
+              height="675"
+              fetchpriority="high"
             />
             {!isImageLoaded && (
               <div className="w-full h-auto aspect-video bg-muted animate-pulse"></div>
@@ -190,7 +251,7 @@ const BlogPost = () => {
             {/* Main Content */}
             <article 
               id="article-content"
-              className="prose prose-lg dark:prose-invert max-w-none animate-fade-in"
+              className="blog-content prose prose-lg dark:prose-invert max-w-none animate-fade-in"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
             
@@ -200,7 +261,7 @@ const BlogPost = () => {
                 <TableOfContents articleId="article-content" />
                 
                 <div className="mt-6">
-                  <h3 className="font-serif text-lg font-semibold mb-3">Tags</h3>
+                  <h3 className="font-montserrat text-lg font-semibold mb-3">Tags</h3>
                   <div className="flex flex-wrap gap-2">
                     {post.tags.map((tag) => (
                       <span 
@@ -227,7 +288,7 @@ const BlogPost = () => {
       {loadingRelated ? (
         <section className="py-16 bg-secondary/30">
           <div className="container-blog">
-            <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-8 text-center">Related Posts</h2>
+            <h2 className="font-montserrat text-2xl md:text-3xl font-semibold mb-8 text-center">Related Posts</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[1, 2, 3].map(i => (
                 <div key={i} className="animate-pulse">
@@ -243,7 +304,7 @@ const BlogPost = () => {
       ) : relatedPosts && relatedPosts.length > 0 ? (
         <section className="py-16 bg-secondary/30">
           <div className="container-blog">
-            <h2 className="font-serif text-2xl md:text-3xl font-semibold mb-8 text-center">Related Posts</h2>
+            <h2 className="font-montserrat text-2xl md:text-3xl font-semibold mb-8 text-center">Related Posts</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {relatedPosts.map((post, index) => (

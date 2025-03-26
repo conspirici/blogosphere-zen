@@ -66,7 +66,15 @@ export default {
 			},
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
-				serif: ['"Playfair Display"', 'serif']
+				serif: ['"Playfair Display"', 'serif'],
+				montserrat: ['Montserrat', 'sans-serif'],
+				opensans: ['Open Sans', 'sans-serif'],
+				roboto: ['Roboto', 'sans-serif'],
+				inter: ['Inter', 'sans-serif'],
+				lora: ['Lora', 'serif'],
+				poppins: ['Poppins', 'sans-serif'],
+				merriweather: ['Merriweather', 'serif'],
+				playfair: ['"Playfair Display"', 'serif']
 			},
 			keyframes: {
 				'accordion-down': {
@@ -88,6 +96,9 @@ export default {
 				'image-shine': {
 					'0%': { 'background-position': '200% 0' },
 					'100%': { 'background-position': '-200% 0' }
+				},
+				'shimmer': {
+					'100%': { transform: 'translateX(100%)' }
 				}
 			},
 			animation: {
@@ -95,7 +106,8 @@ export default {
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.6s ease-out',
 				'fade-in-right': 'fade-in-right 0.6s ease-out',
-				'image-shine': 'image-shine 2.5s linear infinite'
+				'image-shine': 'image-shine 2.5s linear infinite',
+				'shimmer': 'shimmer 2s infinite'
 			}
 		}
 	},
